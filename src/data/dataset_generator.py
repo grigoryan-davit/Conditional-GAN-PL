@@ -9,7 +9,7 @@ from torchvision import transforms
 from torchvision.utils import make_grid
 
 
-class ColorizationDataset(Dataset):
+class CGANDataset(Dataset):
     def __init__(
         self, path_list: List[str], split: str = "train", image_size: int = 256
     ):
@@ -40,15 +40,18 @@ class ColorizationDataset(Dataset):
         return len(self.paths)
 
 
-class ColorizationDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: List[str], batch_size: int = 32):
+class CGANDataModule(pl.LightningDataModule):
+    def __init__(
+        self, train_dirs: List[str], val_dirs: List[str], batch_size: int = 32
+    ):
         super().__init__()
-        self.data_dir = data_dir
+        self.train_dirs = train_dirs
+        self.val_dirs = val_dirs
         self.batch_size = batch_size
 
     def setup(self, stage: Optional[str] = None):
-        self.train_dataset = ColorizationDataset(path_list=self.data_dir, split="train")
-        self.val_dataset = ColorizationDataset(path_list=self.data_dir, split="val")
+        self.train_dataset = CGANDataset(path_list=self.train_dirs, split="train")
+        self.val_dataset = CGANDataset(path_list=self.val_dir, split="val")
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)

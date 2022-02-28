@@ -1,6 +1,9 @@
 experiment_name: "summarization-abstractive"
 n_epochs: 100
 layers_to_freeze: [1, 5] # null for no freezing
+lr_D: [5e-5, 2e-4, 1e-3]
+lr_G: [5e-5, 2e-4, 1e-3]
+pruning_amount: [None, 0.25, 0.5]
 batch_size: 8
 max_token_len: 512
 max_summary_len: 256
@@ -13,4 +16,6 @@ training_tricks: {
   }
 early_stopping: { patience: 2, stopping_threshold: 0.08 }
 
-savedir: "../../models/abstractive/"
+train_datadir: "../data/train/"
+val_datadir: "../data/val/"
+savedir: "../../models/"
