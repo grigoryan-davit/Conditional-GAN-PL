@@ -1,0 +1,16 @@
+experiment_name: "summarization-abstractive"
+n_epochs: 100
+layers_to_freeze: [1, 5] # null for no freezing
+batch_size: 8
+max_token_len: 512
+max_summary_len: 256
+training_tricks: {
+    stochastic_weight_avg: True,
+    gradient_clip: 0, # 0 means no clipping
+    precision: 32, # 32 is full precision, 16 is half precision
+    autoscale_batchsize: null, # can be "binsearch" or "power"
+    find_lr: True,
+  }
+early_stopping: { patience: 2, stopping_threshold: 0.08 }
+
+savedir: "../../models/abstractive/"

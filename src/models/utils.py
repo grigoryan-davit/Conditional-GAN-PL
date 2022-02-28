@@ -1,36 +1,13 @@
+import time
+
+import matplotlib.pyplot as plt
+import numpy as np
+from skimage.color import lab2rgb
 import torch
 import torch.nn as nn
 
 
-class GANLoss(nn.Module):
-    def __init__(
-        self,
-        gan_mode: str = "vanilla",
-        real_label: float = 1.0,
-        fake_label: float = 0.0,
-    ):
-        super().__init__()
-        self.register_buffer("real_label", torch.tensor(real_label))
-        self.register_buffer("fake_label", torch.tensor(fake_label))
-        if gan_mode == "vanilla":
-            self.loss = nn.BCEWithLogitsLoss()
-        elif gan_mode == "lsgan":
-            self.loss = nn.MSELoss()
-
-    def get_labels(self, preds, target_is_real):
-        if target_is_real:
-            labels = self.real_label
-        else:
-            labels = self.fake_label
-        return labels.expand_as(preds)
-
-    def __call__(self, preds, target_is_real):
-        labels = self.get_labels(preds, target_is_real)
-        loss = self.loss(preds, labels)
-        return loss
-
-
-def init_weights(net, init="norm", gain=0.02):
+def init_weights(net, init: str = "norm", gain: float = 0.02):
     """
     using Kaiming init even though not explicitly specified in the paper,
     as Xavier init has been shown to not work that well with ReLU
@@ -51,7 +28,82 @@ def init_weights(net, init="norm", gain=0.02):
     return net
 
 
-def init_model(model, device):
-    model = model.to(device)
-    model = init_weights(model)
-    return model
+##### check these out
+class AverageMeter:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.count, self.avg, self.sum = [0.0] * 3
+
+    def update(self, val, count=1):
+        self.count += count
+        self.sum += count * val
+        self.avg = self.sum / self.count
+
+
+def create_loss_meters():
+    loss_D_fake = AverageMeter()
+    loss_D_real = AverageMeter()
+    loss_D = AverageMeter()
+    loss_G_GAN = AverageMeter()
+    loss_G_L1 = AverageMeter()
+    loss_G = AverageMeter()
+
+    return {
+        "loss_D_fake": loss_D_fake,
+        "loss_D_real": loss_D_real,
+        "loss_D": loss_D,
+        "loss_G_GAN": loss_G_GAN,
+        "loss_G_L1": loss_G_L1,
+        "loss_G": loss_G,
+    }
+
+
+def update_losses(model, loss_meter_dict, count):
+    for loss_name, loss_meter in loss_meter_dict.items():
+        loss = getattr(model, loss_name)
+        loss_meter.update(loss.item(), count=count)
+
+
+def lab_to_rgb(L, ab) -> np.ndarray:
+    L = (L + 1.0) * 50.0
+    ab = ab * 110.0
+    Lab = torch.cat([L, ab], dim=1).permute(0, 2, 3, 1).cpu().numpy()
+    rgb_imgs = []
+    for img in Lab:
+        img_rgb = lab2rgb(img)
+        rgb_imgs.append(img_rgb)
+    return np.stack(rgb_imgs, axis=0)
+
+
+def visualize(model, data, save=True):
+    model.net_G.eval()
+    with torch.no_grad():
+        model.setup_input(data)
+        model.forward()
+    model.net_G.train()
+    fake_color = model.fake_color.detach()
+    real_color = model.ab
+    L = model.L
+    fake_imgs = lab_to_rgb(L, fake_color)
+    real_imgs = lab_to_rgb(L, real_color)
+    fig = plt.figure(figsize=(15, 8))
+    for i in range(5):
+        ax = plt.subplot(3, 5, i + 1)
+        ax.imshow(L[i][0].cpu(), cmap="gray")
+        ax.axis("off")
+        ax = plt.subplot(3, 5, i + 1 + 5)
+        ax.imshow(fake_imgs[i])
+        ax.axis("off")
+        ax = plt.subplot(3, 5, i + 1 + 10)
+        ax.imshow(real_imgs[i])
+        ax.axis("off")
+    plt.show()
+    if save:
+        fig.savefig(f"colorization_{time.time()}.png")
+
+
+def log_results(loss_meter_dict):
+    for loss_name, loss_meter in loss_meter_dict.items():
+        print(f"{loss_name}: {loss_meter.avg:.5f}")

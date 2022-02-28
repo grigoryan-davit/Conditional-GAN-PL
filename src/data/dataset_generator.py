@@ -41,27 +41,17 @@ class ColorizationDataset(Dataset):
 
 
 class ColorizationDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str = "../../data/raw", batch_size: int = 32):
+    def __init__(self, data_dir: List[str], batch_size: int = 32):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
 
     def setup(self, stage: Optional[str] = None):
-        self.train_dataset = ColorizationDataset()
-        self.val_dataset = ColorizationDataset()
+        self.train_dataset = ColorizationDataset(path_list=self.data_dir, split="train")
+        self.val_dataset = ColorizationDataset(path_list=self.data_dir, split="val")
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=2)
-
-
-def make_dataloaders(
-    batch_size=16, n_workers=4, pin_memory=True, **kwargs
-):  # A handy function to make our dataloaders
-    dataset = ColorizationDataset(**kwargs)
-    dataloader = DataLoader(
-        dataset, batch_size=batch_size, num_workers=n_workers, pin_memory=pin_memory
-    )
-    return dataloader
+        return DataLoader(self.val_dataset, batch_size=self.batch_size)
