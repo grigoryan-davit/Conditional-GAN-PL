@@ -24,7 +24,6 @@ def init_weights(net, init: str = "norm", gain: float = 0.02):
             nn.init.constant_(m.bias.data, 0.0)
 
     net.apply(init_func)
-    print(f"model initialized with {init} initialization")
     return net
 
 
